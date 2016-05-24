@@ -1,0 +1,25 @@
+Two versions of the code are built. One uses standard copy of host
+data to the GPU memory. The other does memory mapping since the GPU
+and CPU share DDR memory on this host. The versions are differentiated
+by the compiler flag -DZEROCOPY
+
+To build with minimal output:
+
+make
+
+To build with debug output:
+
+make CFLAGS=-DDEBUG
+
+To initialize arrays to the index value instead of a random number:
+
+make CFLAGS=-DNORANDOM
+
+To clean up, do either 
+
+make clean
+
+or 
+
+make veryclean
+
