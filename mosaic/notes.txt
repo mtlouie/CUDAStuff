@@ -1,0 +1,9 @@
+Steps:
+
+1.  Add Makefile, to simplify edit-build-test cycle
+
+2.  Bring main.c up to compilability
+
+3.  Fill in functions bottom up
+
+4.  Modularize and add test separate from target app
