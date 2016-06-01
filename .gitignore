@@ -1,1 +1,6 @@
-openmptest.c
+*.o
+*.a
+openmptest
+junk
+cudatest
+cudazctest
