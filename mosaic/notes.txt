@@ -1,8 +1,8 @@
 Steps:
 
-1.  Add Makefile, to simplify edit-build-test cycle
+1.  DONE Add Makefile, to simplify edit-build-test cycle
 
-2.  Bring main.c up to compilability
+2.  DONE Bring main.c up to compilability
 
 3.  Fill in functions bottom up
 
