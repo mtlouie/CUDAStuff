@@ -10,7 +10,7 @@ int main (int argc, char **argv) {
     // Get filename from command line
     ImageData srcImage = ReadImage(argv[1]);
     ImageData finalImage = CloneImage(srcImage);
-    ImageData sampledFinal = Resample(finalImage, 64, 64);
+    ImageData sampledFinal = Resample(finalImage, 512, 512);
 
 #if 0
     nx_dim=nx_src/nx_sample;
@@ -122,8 +122,8 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 	}
     }
 
-    for(int i = 0; i < sampled_x-1; i++) {
-        for(int j = 0; j < sampled_y-1; j++) {
+    for(int i = 0; i < sampled_x; i++) {
+        for(int j = 0; j < sampled_y; j++) {
             double x = (double)i / sampled_x;
             double y = (double)j / sampled_y;
             int ix = x*testImage.xDim;
@@ -132,21 +132,43 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
             double dy = y*testImage.yDim-jy;
             int ixp1 = ix+1;
             int jyp1 = jy+1;
-            resampled.pixels[i*sampled_y+j].R = 
-	      (unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].R
-				    +dx*testImage.pixels[ixp1*ny_test+jy].R
-				    +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].R
-				    +dy*testImage.pixels[ix*ny_test+jyp1].R));
-            resampled.pixels[i*sampled_y+j].G = 
-	      (unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].G
-				  +dx*testImage.pixels[ixp1*ny_test+jy].G
-				  +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].G
-				  +dy*testImage.pixels[ix*ny_test+jyp1].G));
-            resampled.pixels[i*sampled_y+j].B = 
-	      (unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].B
-				    +dx*testImage.pixels[ixp1*ny_test+jy].B
-				    +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].B
-				    +dy*testImage.pixels[ix*ny_test+jyp1].B));
+	    if((ixp1<testImage.xDim)&&(jyp1<testImage.yDim)) { 
+	      resampled.pixels[i*sampled_y+j].R = 
+		(unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].R
+				      +dx*testImage.pixels[ixp1*ny_test+jy].R
+				      +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].R
+				      +dy*testImage.pixels[ix*ny_test+jyp1].R));
+	      resampled.pixels[i*sampled_y+j].G = 
+		(unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].G
+				      +dx*testImage.pixels[ixp1*ny_test+jy].G
+				      +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].G
+				      +dy*testImage.pixels[ix*ny_test+jyp1].G));
+	      resampled.pixels[i*sampled_y+j].B = 
+		(unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].B
+				      +dx*testImage.pixels[ixp1*ny_test+jy].B
+				      +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].B
+				      +dy*testImage.pixels[ix*ny_test+jyp1].B));
+	    }
+	    else {
+	      if((ixp1>=testImage.xDim)&&(jyp1>=testImage.yDim)) {
+		resampled.pixels[i*sampled_y+j] = resampled.pixels[(i-1)*sampled_y+(j-1)];
+	    	/* resampled.pixels[i*sampled_y+j].R = resampled.pixels[(i-1)*sampled_y+(j-1)].R; */
+	    	/* resampled.pixels[i*sampled_y+j].G = resampled.pixels[(i-1)*sampled_y+(j-1)].G; */
+	    	/* resampled.pixels[i*sampled_y+j].B = resampled.pixels[(i-1)*sampled_y+(j-1)].B; */
+	      }
+	      else if (ixp1>=testImage.xDim) {
+	    	resampled.pixels[i*sampled_y+j] = resampled.pixels[(i-1)*sampled_y+j];
+	    	/* resampled.pixels[i*sampled_y+j].R = resampled.pixels[i*sampled_y+j-1].R; */
+	    	/* resampled.pixels[i*sampled_y+j].G = resampled.pixels[i*sampled_y+j-1].G; */
+	    	/* resampled.pixels[i*sampled_y+j].B = resampled.pixels[i*sampled_y+j-1].B; */
+	      }
+	      else {
+	    	resampled.pixels[i*sampled_y+j] = resampled.pixels[i*sampled_y+j-1];
+	    	/* resampled.pixels[i*sampled_y+j].R = resampled.pixels[(i-1)*sampled_y+j].R; */
+	    	/* resampled.pixels[i*sampled_y+j].G = resampled.pixels[(i-1)*sampled_y+j].G; */
+	    	/* resampled.pixels[i*sampled_y+j].B = resampled.pixels[(i-1)*sampled_y+j].B; */
+	      }
+	    }
         }
     }
 
