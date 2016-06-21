@@ -1,0 +1,12 @@
+# .gitignore file for CUDAStuff
+
+# Editor backup files
+*~
+
+# Compiler artifacts
+*.o
+
+# Tagged program output files
+*_out.*
+
+
