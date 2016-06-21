@@ -10,7 +10,7 @@ int main (int argc, char **argv) {
     // Get filename from command line
     ImageData srcImage = ReadImage(argv[1]);
     ImageData finalImage = CloneImage(srcImage);
-    ImageData sampledFinal = Resample(finalImage, 256, 256);
+    ImageData sampledFinal = Resample(finalImage, 64, 64);
 
 #if 0
     nx_dim=nx_src/nx_sample;
@@ -103,9 +103,9 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
     resampled.yDim = sampled_y;
     resampled.pixels = (Pixel *)malloc(sampled_x * sampled_y * sizeof(Pixel));
 
-    // If we couldn't get memory, skip the rest of it
     if (!resampled.pixels)
     {
+      // If we couldn't get memory, skip the rest of the processing
         resampled.valid = false;
         return resampled;
     }
@@ -116,29 +116,37 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 
     for(int i = 0; i < sampled_x; i++) {
         for(int j = 0; j < sampled_y; j++) {
+	  resampled.pixels[i*sampled_y+j].R = 128;
+	  resampled.pixels[i*sampled_y+j].G = 0;
+	  resampled.pixels[i*sampled_y+j].B = 0;
+	}
+    }
+
+    for(int i = 0; i < sampled_x-1; i++) {
+        for(int j = 0; j < sampled_y-1; j++) {
             double x = (double)i / sampled_x;
             double y = (double)j / sampled_y;
-            int ix = x;
-            int jy = y;
-            double dx = x-ix;
-            double dy = y-jy;
+            int ix = x*testImage.xDim;
+            int jy = y*testImage.yDim;
+            double dx = x*testImage.xDim-ix;
+            double dy = y*testImage.yDim-jy;
             int ixp1 = ix+1;
             int jyp1 = jy+1;
             resampled.pixels[i*sampled_y+j].R = 
-                (unsigned int)0.5d*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].R
-                    +dx*testImage.pixels[ixp1*ny_test+jy].R
-                    +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].R
-                    +dy*testImage.pixels[ix*ny_test+jyp1].R);
+	      (unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].R
+				    +dx*testImage.pixels[ixp1*ny_test+jy].R
+				    +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].R
+				    +dy*testImage.pixels[ix*ny_test+jyp1].R));
             resampled.pixels[i*sampled_y+j].G = 
-                (unsigned int)0.5d*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].G
-                    +dx*testImage.pixels[ixp1*ny_test+jy].G
-                    +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].G
-                    +dy*testImage.pixels[ix*ny_test+jyp1].G);
+	      (unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].G
+				  +dx*testImage.pixels[ixp1*ny_test+jy].G
+				  +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].G
+				  +dy*testImage.pixels[ix*ny_test+jyp1].G));
             resampled.pixels[i*sampled_y+j].B = 
-                (unsigned int)0.5d*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].B
-                    +dx*testImage.pixels[ixp1*ny_test+jy].B
-                    +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].B
-                    +dy*testImage.pixels[ix*ny_test+jyp1].B);
+	      (unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].B
+				    +dx*testImage.pixels[ixp1*ny_test+jy].B
+				    +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].B
+				    +dy*testImage.pixels[ix*ny_test+jyp1].B));
         }
     }
 

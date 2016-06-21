@@ -3,7 +3,7 @@
 CC = gcc
 #CC = nvcc
 
-OPTS = -Wall -Werror -std=c99
+OPTS = -Wall  -std=c99
 
 mosaic: mosaic.o image.o
 	$(CC) mosaic.o image.o -o mosaic -ljpeg
