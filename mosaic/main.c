@@ -112,6 +112,7 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 
     // Now do the hard work
     // "Cheat" to simplify editing
+    int nx_test = testImage.xDim;
     int ny_test = testImage.yDim;
 
     for(int i = 0; i < sampled_x; i++) {
@@ -124,54 +125,37 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 
     for(int i = 0; i < sampled_x; i++) {
         for(int j = 0; j < sampled_y; j++) {
-            double x = (double)i / sampled_x;
-            double y = (double)j / sampled_y;
-            int ix = x*testImage.xDim;
-            int jy = y*testImage.yDim;
-            double dx = x*testImage.xDim-ix;
-            double dy = y*testImage.yDim-jy;
-            int ixp1 = ix+1;
-            int jyp1 = jy+1;
-	    if((ixp1<testImage.xDim)&&(jyp1<testImage.yDim)) { 
-	      resampled.pixels[i*sampled_y+j].R = 
-		(unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].R
-				      +dx*testImage.pixels[ixp1*ny_test+jy].R
-				      +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].R
-				      +dy*testImage.pixels[ix*ny_test+jyp1].R));
-	      resampled.pixels[i*sampled_y+j].G = 
-		(unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].G
-				      +dx*testImage.pixels[ixp1*ny_test+jy].G
-				      +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].G
-				      +dy*testImage.pixels[ix*ny_test+jyp1].G));
-	      resampled.pixels[i*sampled_y+j].B = 
-		(unsigned int)(0.5e0*((1.e0-dx)*testImage.pixels[ix*ny_test+jy].B
-				      +dx*testImage.pixels[ixp1*ny_test+jy].B
-				      +(1.e0-dy)*testImage.pixels[ix*ny_test+jy].B
-				      +dy*testImage.pixels[ix*ny_test+jyp1].B));
-	    }
-	    else {
-	      if((ixp1>=testImage.xDim)&&(jyp1>=testImage.yDim)) {
-		resampled.pixels[i*sampled_y+j] = resampled.pixels[(i-1)*sampled_y+(j-1)];
-	    	/* resampled.pixels[i*sampled_y+j].R = resampled.pixels[(i-1)*sampled_y+(j-1)].R; */
-	    	/* resampled.pixels[i*sampled_y+j].G = resampled.pixels[(i-1)*sampled_y+(j-1)].G; */
-	    	/* resampled.pixels[i*sampled_y+j].B = resampled.pixels[(i-1)*sampled_y+(j-1)].B; */
-	      }
-	      else if (ixp1>=testImage.xDim) {
-	    	resampled.pixels[i*sampled_y+j] = resampled.pixels[(i-1)*sampled_y+j];
-	    	/* resampled.pixels[i*sampled_y+j].R = resampled.pixels[i*sampled_y+j-1].R; */
-	    	/* resampled.pixels[i*sampled_y+j].G = resampled.pixels[i*sampled_y+j-1].G; */
-	    	/* resampled.pixels[i*sampled_y+j].B = resampled.pixels[i*sampled_y+j-1].B; */
-	      }
-	      else {
-	    	resampled.pixels[i*sampled_y+j] = resampled.pixels[i*sampled_y+j-1];
-	    	/* resampled.pixels[i*sampled_y+j].R = resampled.pixels[(i-1)*sampled_y+j].R; */
-	    	/* resampled.pixels[i*sampled_y+j].G = resampled.pixels[(i-1)*sampled_y+j].G; */
-	    	/* resampled.pixels[i*sampled_y+j].B = resampled.pixels[(i-1)*sampled_y+j].B; */
-	      }
-	    }
+	  double x = (double)i / (double)(sampled_x-1);
+	  double y = (double)j / (double)(sampled_y-1);
+	  int ix = x*(nx_test-1);
+	  int jy = y*(ny_test-1);
+	  double dx = x*(nx_test-1)-ix;
+	  double dy = y*(ny_test-1)-jy;
+	  Pixel *top_left, *top_right, *bottom_left, *bottom_right, *dest;
+	  int xstride, ystride;
+	  /* The next pair of if statements allow us to interpolate all the way to the edges of the image. */
+	  xstride=((ix+1)<nx_test)?ny_test:0;
+	  ystride=((jy+1)<ny_test)?1:0;
+	  /* Locations of pixels to be interpolated in input image */
+	  top_left=&testImage.pixels[ix*ny_test+jy];
+	  top_right=top_left+xstride;
+	  bottom_left=top_left+ystride; 
+          bottom_right=top_left+xstride+ystride;
+	  /* Location of destination pixel in output image */
+	  dest=&resampled.pixels[i*sampled_y+j];
+	  /* Standard resampling scheme - interpolate along two lines parallel to the x axis, then interpolate vertically. */
+	  dest->R = 
+	    (unsigned int)((1.0e0-dy)*((1.e0-dx)*top_left->R+dx*top_right->R)+dy*((1.e0-dx)*bottom_left->R+dx*bottom_right->R));
+	  dest->G = 
+	    (unsigned int)((1.0e0-dy)*((1.e0-dx)*top_left->G+dx*top_right->G)+dy*((1.e0-dx)*bottom_left->G+dx*bottom_right->G));
+	  dest->B = 
+	    (unsigned int)((1.0e0-dy)*((1.e0-dx)*top_left->B+dx*top_right->B)+dy*((1.e0-dx)*bottom_left->B+dx*bottom_right->B));
         }
     }
 
     return resampled;
 }
 
+/* Local Variables: */
+/* mode:c           */
+/* End:             */
