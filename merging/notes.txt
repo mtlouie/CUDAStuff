@@ -1,0 +1,8 @@
+This folder is a working demo of the process shown in Pro Git, section 3.2
+  https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging
+but with simple text files.
+
+1.  Initialize with three text files:
+    notes.txt (this one)
+    a.txt
+    b.txt
