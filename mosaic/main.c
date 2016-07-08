@@ -129,6 +129,9 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
     }
 #endif
 
+    /* Note: The resampling scheme below will distort the resampled image if
+     * the resampled image does not have the same aspect ratio as the original image.
+     * For the general case, we will need to truncate or fill an image. */
     for(int i = 0; i < sampled_x; i++) {
         for(int j = 0; j < sampled_y; j++) {
 	  double x = (double)i / (double)(sampled_x-1);
