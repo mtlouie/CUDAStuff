@@ -6,8 +6,8 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y);
 
 int main (int argc, char **argv) {
 
-    // Read source image into memory
-    // Get filename from command line
+    /* Read source image into memory
+     * Get filename from command line */
     ImageData srcImage = ReadImage(argv[1]);
     ImageData finalImage = CloneImage(srcImage);
     ImageData sampledFinal = Resample(finalImage, 512, 512);
@@ -16,47 +16,50 @@ int main (int argc, char **argv) {
     nx_dim=nx_src/nx_sample;
     ny_dim=ny_src/ny_sample;
 
-    // Allocate memory for Mosaic data
-    // index_array is array of indices into library of images
-    // orientation_array is array of orientations of library images
-    //   (only for square test images)
+    /* Allocate memory for Mosaic data
+     * index_array is array of indices into library of images
+     * orientation_array is array of orientations of library images
+     * (only for square test images) */
     index_array=(int *)malloc(nx_dim*ny_dim*sizeof(int));
     if(nx_test==ny_test) {
         orientation_array=(char *)malloc(nx_dim*ny_dim*sizeof(char));
     }
-    // min_rms_array is metric for difference between test and original images
-    //    at each block of the original
+    /* min_rms_array is metric for difference between test and original images
+       at each block of the original */
     min_rms_array=(long *)malloc(nx_dim*ny_dim*sizeof(long));
-    // test_image is buffer for library images to be compared against original
+    /* test_image is buffer for library images to be compared against original */
     test_image=(Pixel *) malloc(nx_test*ny_test*sizeof(Pixel));
 
-    // Loop over library images
+    /* Loop over library images */
     for(i=0; i< nlib_images; i++) {
-        //   Get library image
+        /*   Get library image */
         GetImage(testImage, nx_test, ny_test, i);
-        //   Resample library image to tile size
+        /*   Resample library image to tile size */
         Resample(testImage, nx_test, ny_test, ResampledTest, nx_sample, ny_sample);
-        //   Compare tile with source image by tiling over source image
-        //    index_array, orientation_array, comparison_array
+        /*   Compare tile with source image by tiling over source image
+         *    index_array, orientation_array, comparison_array */
         CompareImage(SRCrgbArray, nx_src, ny_src, 
                 ResampledTest, nx_sample, ny_sample, 
                 index_array, min_rms_array, orientation_array);
     }
-    // Free memory for source image.
+
+    /* Free memory for source image. */
+
     free(SRCrgbArray);
-    //
-    // Constructing the final image
-    //
-    // Allocate memory for final image
+    /*
+     * Constructing the final image
+     *
+     * Allocate memory for final image
+     */
     nx_tile=nx_test*nx_scale;
     ny_tile=ny_test*ny_scale;
     nx_final=(nx_src/nx_sample)*nx_tile;
     ny_final=(ny_src/ny_sample)*ny_tile;
     FinalImage=malloc(nx_final*ny_final*n_color_depth*npixel_depth);
 
-    // Loop over library images
+    /* Loop over library images */
     for(i=0; i< nlib_images; i++) {
-        // Insert logic to skip unused library images
+        /* Insert logic to skip unused library images */
         GetImage(testImage, nx_test, ny_test, i);
         Resample(testImage, nx_test, ny_test, ResampledTest, nx_tile, ny_tile);
         ReplaceInImage(i, 
@@ -64,9 +67,9 @@ int main (int argc, char **argv) {
                 FinalImage, nx_final, ny_final, 
                 ResampledTest, nx_tile, ny_tile);
     }
-#endif // #if 0
+#endif /* #if 0 */
 
-    //   Loop through index_array, replacing locations in final image with library image if it matches index value.
+    /*   Loop through index_array, replacing locations in final image with library image if it matches index value. */
     WriteImage(&sampledFinal, argv[2]);
     ReleaseImage(&finalImage);
     ReleaseImage(&srcImage);
@@ -77,7 +80,7 @@ int main (int argc, char **argv) {
 #include <stdlib.h>
 
 void GetImage(Pixel* testImage, int nx_test, int ny_test, int i, int pixel_depth) {
-    // This version produces a random image
+    /* This version produces a random image */
     int j;
     float scale;
     Pixel *ptr=testImage;
@@ -95,7 +98,7 @@ void GetImage(Pixel* testImage, int nx_test, int ny_test, int i, int pixel_depth
     }
 }  
 
-#endif // #if 0
+#endif /* #if 0 */
 
 ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
     ImageData resampled;
@@ -105,16 +108,18 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 
     if (!resampled.pixels)
     {
-      // If we couldn't get memory, skip the rest of the processing
+	/* If we couldn't get memory, skip the rest of the processing. */
         resampled.valid = false;
         return resampled;
     }
 
-    // Now do the hard work
-    // "Cheat" to simplify editing
+    /* Now do the hard work
+     * "Cheat" to simplify editing */
     int nx_test = testImage.xDim;
     int ny_test = testImage.yDim;
 
+#ifdef DEBUG
+    /* Insert red pixels for debugging */
     for(int i = 0; i < sampled_x; i++) {
         for(int j = 0; j < sampled_y; j++) {
 	  resampled.pixels[i*sampled_y+j].R = 128;
@@ -122,6 +127,7 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 	  resampled.pixels[i*sampled_y+j].B = 0;
 	}
     }
+#endif
 
     for(int i = 0; i < sampled_x; i++) {
         for(int j = 0; j < sampled_y; j++) {
@@ -158,4 +164,5 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 
 /* Local Variables: */
 /* mode:c           */
+/* c-file-style: "stroustrup" */
 /* End:             */
