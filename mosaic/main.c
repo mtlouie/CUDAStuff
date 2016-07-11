@@ -75,7 +75,7 @@ int main (int argc, char **argv) {
 	WriteImage(&sampledFinal, argv[2]);
 	/* ReleaseImage(&finalImage); */
 	ReleaseImage(&srcImage);
-
+    }
 }
 
 #if 0

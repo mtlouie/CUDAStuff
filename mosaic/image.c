@@ -3,11 +3,13 @@
 #include "image.h"
 #include <stdlib.h>    // For exit()
 #include <stdio.h>
-#include <setjmp.h>    // For libjpeg error handling
 #include <string.h>    // For memcpy
 #include <stdarg.h>    // for va_list and friends
 #include "jpeglib.h"   // On Ubuntu, apt-get install libjpeg-dev
-#include "png.h"       //   ... libpng-dev
+#include <png.h>       //   ... libpng-dev
+#ifndef _SETJMP_H_
+#include <setjmp.h>    // For libjpeg error handling
+#endif
 
 void abort_(const char * s, ...)
 {
