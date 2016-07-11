@@ -9,8 +9,8 @@
 # Tagged program output files
 *_out.*
 
-mosaic*.jpg 
-
+mosaic*.jpg
+mosaic*.png
 mosaic
 
 
