@@ -9,6 +9,7 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y);
 
 int main (int argc, char **argv) {
 
+    char buffer[256];
     int nx_src, ny_src;
     int nx_sample, ny_sample;
     int nx_dim, ny_dim;
@@ -18,7 +19,6 @@ int main (int argc, char **argv) {
     int nx_test, ny_test;
     int nx_tile, ny_tile;
     int nx_final, ny_final;
-    ImageData ResampledTest;
     /* Read source image into memory
      * Get filename from command line */
     if (argc >1)
@@ -32,7 +32,7 @@ int main (int argc, char **argv) {
 
 	    nx_src=srcImage.xDim;
 	    ny_src=srcImage.yDim;
-	    nx_sample=ny_sample=32;
+	    nx_sample=ny_sample=16;
 	    nx_dim=nx_src/nx_sample;
 	    ny_dim=ny_src/ny_sample;
 
@@ -54,14 +54,16 @@ int main (int argc, char **argv) {
 	    for(i=2; i< argc; i++) {
 		/*   Get library image */
 		ImageData testImage=ReadImage (argv[i]);
+		ImageData ResampledTest;
 		nx_test=testImage.xDim;
 		ny_test=testImage.yDim;
 		/*   Resample library image to tile size */
 		ResampledTest=Resample(testImage, nx_test, ny_test);
+		ReleaseImage(&testImage);
 		/*   Compare tile with source image by tiling over source image
 		 *    index_array, orientation_array, comparison_array */
 		CompareImage(srcImage, ResampledTest, i, index_array, min_rms_array /*, orientation_array */, nx_dim, ny_dim);
-		ReleaseImage(&testImage);
+		ReleaseImage(&ResampledTest);
 	    }
 	
 	    /* Free memory for source image. */
@@ -81,14 +83,20 @@ int main (int argc, char **argv) {
 	    for(i=2; i<argc; i++) {
 		/* Insert logic to skip unused library images */
 		ImageData testImage=ReadImage(argv[i]);
+		ImageData ResampledTest;
+		sprintf(buffer,"original_tiles-%d.jpg", i);
+		WriteImage(&testImage, buffer);
 		ResampledTest=Resample(testImage, nx_tile, ny_tile);
+		ReleaseImage(&testImage);
+		sprintf(buffer,"Resampled-%d.jpg", i);
+		WriteImage(&ResampledTest, buffer);
 		ReplaceInImage(i, 
 			       index_array,  /* orientation_array, */ 
 			       nx_dim, ny_dim, 
 			       FinalImage, ResampledTest);
+		ReleaseImage(&ResampledTest);
 	    }
 	    /*   Loop through index_array, replacing locations in final image with library image if it matches index value. */
-	    char buffer[256];
 	    sprintf(buffer,"tiled-%s", argv[1]);
 	    WriteImage(&FinalImage, buffer);
 	    ReleaseImage(&FinalImage);
