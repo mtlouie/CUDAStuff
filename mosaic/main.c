@@ -164,20 +164,23 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 	  double y = (double)j / (double)(sampled_y-1);
 	  int ix = x*(nx_test-1);
 	  int jy = y*(ny_test-1);
-	  double dx = x*(nx_test-1)-ix;
-	  double dy = y*(ny_test-1)-jy;
+	  double dx = x*(double)(nx_test-1)-(double)ix;
+	  double dy = y*(double)(ny_test-1)-(double)jy;
 	  Pixel *top_left, *top_right, *bottom_left, *bottom_right, *dest;
 	  int xstride, ystride;
 	  /* The next pair of if statements allow us to interpolate all the way to the edges of the image. */
-	  xstride=((ix+1)<nx_test)?ny_test:0;
-	  ystride=((jy+1)<ny_test)?1:0;
+//	  xstride=((ix+1)<nx_test)?ny_test:0;
+//	  ystride=((jy+1)<ny_test)?1:0;
+	  xstride=((ix+1)<nx_test)?1:0;
+	  ystride=((jy+1)<ny_test)?nx_test:0;
 	  /* Locations of pixels to be interpolated in input image */
-	  top_left=&testImage.pixels[ix*ny_test+jy];
+//	  top_left=&testImage.pixels[ix*ny_test+jy];
+	  top_left=&testImage.pixels[jy*nx_test+ix];
 	  top_right=top_left+xstride;
 	  bottom_left=top_left+ystride; 
           bottom_right=top_left+xstride+ystride;
 	  /* Location of destination pixel in output image */
-	  dest=&resampled.pixels[i*sampled_y+j];
+	  dest=&resampled.pixels[j*sampled_x+i];
 	  /* Standard resampling scheme - interpolate along two lines parallel to the x axis, then interpolate vertically. */
 	  dest->R = 
 	    (unsigned int)((1.0e0-dy)*((1.e0-dx)*top_left->R+dx*top_right->R)+dy*((1.e0-dx)*bottom_left->R+dx*bottom_right->R));
