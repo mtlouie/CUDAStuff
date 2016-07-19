@@ -1,7 +1,18 @@
 #include <stdio.h>
-#include <stdlib.h>   // For malloc
+#include <stdlib.h>   /* For malloc and atoi */
+#include <unistd.h>   /* For getopt */
+#include <getopt.h>
 #include "image.h"
 #include "CompareImage.h"
+
+/* Tile dimensions used in comparisons */
+#ifndef SAMPLESIZE
+#define SAMPLESIZE 8
+#endif
+/* Tile dimensions used in replacements */
+#ifndef TILESIZE
+#define TILESIZE 24
+#endif
 
 #include <limits.h>  /* Defines LONG_MAX */
 
@@ -19,14 +30,38 @@ int main (int argc, char **argv) {
     int nx_test, ny_test;
     int nx_tile, ny_tile;
     int nx_final, ny_final;
+    int flag;
+    int do_grayscale=0;
+    extern char *optarg;
+    extern int optind, opterr, optopt;
+
+    nx_sample=ny_sample=SAMPLESIZE;
+    nx_tile=ny_tile=TILESIZE;
+
+    while((flag=getopt(argc, argv, "gs:t:"))!=-1) {
+	switch(flag) {
+	case 'g':
+	    printf("Setting grayscale\n");
+	    do_grayscale=1;
+	    break;
+	case 's':
+	    nx_sample=ny_sample=atoi(optarg);
+	    printf("Setting nx_sample=ny_sample=%d\n", nx_sample);
+	    break;
+	case 't':
+	    nx_tile=ny_tile=atoi(optarg);
+	    printf("Setting nx_tile=ny_tile=%d\n", nx_tile);
+	    break;
+	}
+    }
+
     /* Read source image into memory
-     * Get filename from command line */
-    nx_sample=ny_sample=8;
-    nx_tile=ny_tile=24;
-    if (argc>1)
+     * Get filename from command line after parsing command line args */
+    if ((argc-optind)>1)
     {	
-	fprintf(stderr,"argc = %d\n", argc);
-	ImageData srcImage = ReadImage(argv[1]);
+	fprintf(stderr,"Files to process = %d\n", argc-optind+1);
+	fprintf(stderr,"Target = %s\n", argv[optind]);
+	ImageData srcImage = ReadImage(argv[optind]);
 	if (srcImage.valid)
 	{
 	    nx_src=srcImage.xDim;
@@ -52,7 +87,12 @@ int main (int argc, char **argv) {
 		min_rms_array[k]=LONG_MAX;
 	    /* test_image is buffer for library images to be compared against original */
 	    /* Loop over library images */
-	    for(i=2; i<argc; i++) {
+	    for(i=optind+1; i<argc; i++) {
+#ifdef VERBOSE
+		printf("*");
+		if((i-optind)%50==0) 
+		    printf("\n");
+#endif
 		/*   Get library image */
 		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
@@ -61,14 +101,16 @@ int main (int argc, char **argv) {
 		/*   Resample library image to tile size */
 		ResampledTest=Resample(testImage, nx_sample, ny_sample);
 		ReleaseImage(&testImage);
-		/*   Compare tile with source image by tiling over source image
-		 *    index_array, orientation_array, comparison_array */
-		CompareImage(srcImage, ResampledTest, i, index_array, min_rms_array /*, orientation_array */, nx_dim, ny_dim);
+		/*   Compare tile with source image by tiling over source image index_array, orientation_array, comparison_array */
+		CompareImage(srcImage, ResampledTest, i, index_array, min_rms_array, nx_dim, ny_dim, do_grayscale); /*, orientation_array */
 		ReleaseImage(&ResampledTest);
 	    }
 	
 	    /* Free memory for source image. */
 	    ReleaseImage(&srcImage);
+#ifdef VERBOSE
+	    printf("\n");
+#endif
 	    /*
 	     * Constructing the final image
 	     */
@@ -79,7 +121,12 @@ int main (int argc, char **argv) {
 	    FinalImage.yDim=ny_final;
 	    FinalImage.pixels=malloc(nx_final*ny_final*sizeof(Pixel));
 	    /* Loop over library images */
-	    for(i=2; i<argc; i++) {
+	    for(i=optind+1; i<argc; i++) {
+#ifdef VERBOSE
+		printf("-");
+		if((i-optind)%50==0) 
+		    printf("\n");
+#endif
 		/* Insert logic to skip unused library images */
 		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
@@ -93,12 +140,14 @@ int main (int argc, char **argv) {
 		sprintf(buffer,"Resampled-%d.jpg", i);
 		WriteImage(&ResampledTest, buffer); 
 #endif
-		ReplaceInImage(i, index_array, nx_dim, ny_dim, 
-			       FinalImage, ResampledTest); /* orientation_array, */ 
+		ReplaceInImage(i, index_array, nx_dim, ny_dim, FinalImage, ResampledTest, do_grayscale); /* orientation_array, */ 
 		ReleaseImage(&ResampledTest);
 	    }
+#ifdef VERBOSE
+	    printf("\n");
+#endif
 	    /*   Loop through index_array, replacing locations in final image with library image if it matches index value. */
-	    sprintf(buffer,"tiled-%s", argv[1]);
+	    sprintf(buffer,"tiled-%s", argv[optind]);
 	    WriteImage(&FinalImage, buffer);
 	    ReleaseImage(&FinalImage);
 	}

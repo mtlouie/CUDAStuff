@@ -4,7 +4,7 @@ CC = gcc
 #CC = nvcc
 
 #OPTS = -Wall -Werror  -std=c99
-OPTS = -Wall  -std=c99 -O3
+OPTS = -Wall  -std=c99 -O3 -DSAMPLESIZE=8 -DTILESIZE=24 -DVERBOSE
 
 mosaic: mosaic.o image.o CompareImage.o
 	$(CC) mosaic.o image.o CompareImage.o -o mosaic -ljpeg -lpng -lz

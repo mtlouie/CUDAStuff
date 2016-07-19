@@ -1,9 +1,9 @@
 #include "image.h"
 #include <stdio.h>
 
-#define GRAYSCALE
-
-void CompareImage(ImageData srcImage, ImageData ResampledTest, int img, int *index_array, long *min_rms_array, int nx_dim, int ny_dim)
+void CompareImage(ImageData srcImage, ImageData ResampledTest, int img, 
+		  int *index_array, long *min_rms_array, int nx_dim, int ny_dim, 
+		  int do_grayscale)
 /* int * orientation_array, */
 {
   long score;
@@ -38,11 +38,7 @@ void CompareImage(ImageData srcImage, ImageData ResampledTest, int img, int *ind
 	    r=(srctmp->R)-(testtmp->R);
 	    g=(srctmp->G)-(testtmp->G);
 	    b=(srctmp->B)-(testtmp->B);
-#ifndef GRAYSCALE
-	    score+=(r*r+g*g+b*b);
-#else
-	    score+=(r+g+b)*(r+g+b);
-#endif
+	    score+=(do_grayscale==0)?(r*r+g*g+b*b):((r+g+b)*(r+g+b));
 	  }
 	}
       }
@@ -55,10 +51,10 @@ void CompareImage(ImageData srcImage, ImageData ResampledTest, int img, int *ind
   }
 }
 
-
 void ReplaceInImage(int img, int *index_array,  
 		    int nx_dim, int ny_dim, 
-		    ImageData FinalImage, ImageData ResampledTest) 
+		    ImageData FinalImage, ImageData ResampledTest,
+		    int do_grayscale) 
 /* orientation_array, */ 
 {
   int nx_final=FinalImage.xDim;
@@ -96,15 +92,18 @@ void ReplaceInImage(int img, int *index_array,
 	    if(ifinal<(nx_final*ny_final)) {
 	      finaltmp=(FinalImage.pixels)+ifinal;
 	      testtmp=(ResampledTest.pixels)+isample;
-#ifndef GRAYSCALE
-	      finaltmp->R=testtmp->R;
-	      finaltmp->G=testtmp->G;
-	      finaltmp->B=testtmp->B;
-#else
-	      finaltmp->R=(testtmp->R+testtmp->G+testtmp->B)/3;
-	      finaltmp->G=finaltmp->R;
-	      finaltmp->B=finaltmp->R;
-#endif
+	      if(do_grayscale==0) {
+		/* Color */
+		finaltmp->R=testtmp->R;
+		finaltmp->G=testtmp->G;
+		finaltmp->B=testtmp->B;
+	      }
+	      else {
+		/* Grayscale */
+		finaltmp->R=(testtmp->R+testtmp->G+testtmp->B)/3;
+		finaltmp->G=finaltmp->R;
+		finaltmp->B=finaltmp->R;
+	      }
 	    }
 	  }
 	}
