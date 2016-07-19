@@ -21,9 +21,11 @@ int main (int argc, char **argv) {
     int nx_final, ny_final;
     /* Read source image into memory
      * Get filename from command line */
-    if (argc >1)
+    nx_sample=ny_sample=8;
+    nx_tile=ny_tile=24;
+    if (argc>1)
     {	
-	
+	fprintf(stderr,"argc = %d\n", argc);
 	ImageData srcImage = ReadImage(argv[1]);
 	if (srcImage.valid)
 	{
@@ -32,7 +34,7 @@ int main (int argc, char **argv) {
 
 	    nx_src=srcImage.xDim;
 	    ny_src=srcImage.yDim;
-	    nx_sample=ny_sample=16;
+//	    nx_sample=ny_sample=16;
 	    nx_dim=nx_src/nx_sample;
 	    ny_dim=ny_src/ny_sample;
 
@@ -41,24 +43,27 @@ int main (int argc, char **argv) {
 	     * orientation_array is array of orientations of library images
 	     * (only for square test images) */
 	    index_array=(int *)malloc(nx_dim*ny_dim*sizeof(int));
+            for(int k=0; k<(nx_dim*ny_dim); k++) 
+		index_array[k]=0;
+		
         /* if(nx_test==ny_test) {
 	orientation_array=(char *)malloc(nx_dim*ny_dim*sizeof(char));
 	}*/
 	    /* min_rms_array is metric for difference between test and original images
 	       at each block of the original */
 	    min_rms_array=(long *)malloc(nx_dim*ny_dim*sizeof(long));
-            for(int k=0; k <nx_dim*ny_dim; k++) 
+            for(int k=0; k<(nx_dim*ny_dim); k++) 
 		min_rms_array[k]=LONG_MAX;
 	    /* test_image is buffer for library images to be compared against original */
 	    /* Loop over library images */
-	    for(i=2; i< argc; i++) {
+	    for(i=2; i<argc; i++) {
 		/*   Get library image */
-		ImageData testImage=ReadImage (argv[i]);
+		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
 		nx_test=testImage.xDim;
 		ny_test=testImage.yDim;
 		/*   Resample library image to tile size */
-		ResampledTest=Resample(testImage, nx_test, ny_test);
+		ResampledTest=Resample(testImage, nx_sample, ny_sample);
 		ReleaseImage(&testImage);
 		/*   Compare tile with source image by tiling over source image
 		 *    index_array, orientation_array, comparison_array */
@@ -71,10 +76,10 @@ int main (int argc, char **argv) {
 	    /*
 	     * Constructing the final image
 	     */
-	    nx_tile=64;
-	    ny_tile=64;
-	    nx_final=(nx_src/nx_sample)*nx_tile;
-	    ny_final=(ny_src/ny_sample)*ny_tile;
+//	    nx_tile=64;
+//	    ny_tile=64;
+	    nx_final=((nx_src+nx_sample-1)/nx_sample)*nx_tile;
+	    ny_final=((ny_src+ny_sample-1)/ny_sample)*ny_tile;
 	    ImageData FinalImage;
 	    FinalImage.xDim=nx_final;
 	    FinalImage.yDim=ny_final;
@@ -84,12 +89,12 @@ int main (int argc, char **argv) {
 		/* Insert logic to skip unused library images */
 		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
-		sprintf(buffer,"original_tiles-%d.jpg", i);
-		WriteImage(&testImage, buffer);
+		/* sprintf(buffer,"original_tiles-%d.jpg", i); */
+		/* WriteImage(&testImage, buffer); */
 		ResampledTest=Resample(testImage, nx_tile, ny_tile);
 		ReleaseImage(&testImage);
-		sprintf(buffer,"Resampled-%d.jpg", i);
-		WriteImage(&ResampledTest, buffer);
+		/* sprintf(buffer,"Resampled-%d.jpg", i); */
+		/* WriteImage(&ResampledTest, buffer); */
 		ReplaceInImage(i, 
 			       index_array,  /* orientation_array, */ 
 			       nx_dim, ny_dim, 
@@ -169,12 +174,9 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y) {
 	  Pixel *top_left, *top_right, *bottom_left, *bottom_right, *dest;
 	  int xstride, ystride;
 	  /* The next pair of if statements allow us to interpolate all the way to the edges of the image. */
-//	  xstride=((ix+1)<nx_test)?ny_test:0;
-//	  ystride=((jy+1)<ny_test)?1:0;
 	  xstride=((ix+1)<nx_test)?1:0;
 	  ystride=((jy+1)<ny_test)?nx_test:0;
 	  /* Locations of pixels to be interpolated in input image */
-//	  top_left=&testImage.pixels[ix*ny_test+jy];
 	  top_left=&testImage.pixels[jy*nx_test+ix];
 	  top_right=top_left+xstride;
 	  bottom_left=top_left+ystride; 
