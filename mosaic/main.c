@@ -29,12 +29,8 @@ int main (int argc, char **argv) {
 	ImageData srcImage = ReadImage(argv[1]);
 	if (srcImage.valid)
 	{
-	    //ImageData finalImage = CloneImage(srcImage);
-	    // ImageData sampledFinal = Resample(srcImage, 256, 256);
-
 	    nx_src=srcImage.xDim;
 	    ny_src=srcImage.yDim;
-//	    nx_sample=ny_sample=16;
 	    nx_dim=nx_src/nx_sample;
 	    ny_dim=ny_src/ny_sample;
 
@@ -76,8 +72,6 @@ int main (int argc, char **argv) {
 	    /*
 	     * Constructing the final image
 	     */
-//	    nx_tile=64;
-//	    ny_tile=64;
 	    nx_final=((nx_src+nx_sample-1)/nx_sample)*nx_tile;
 	    ny_final=((ny_src+ny_sample-1)/ny_sample)*ny_tile;
 	    ImageData FinalImage;
@@ -89,16 +83,18 @@ int main (int argc, char **argv) {
 		/* Insert logic to skip unused library images */
 		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
-		/* sprintf(buffer,"original_tiles-%d.jpg", i); */
-		/* WriteImage(&testImage, buffer); */
+#ifdef DEBUG
+		sprintf(buffer,"original_tiles-%d.jpg", i); 
+		WriteImage(&testImage, buffer); 
+#endif
 		ResampledTest=Resample(testImage, nx_tile, ny_tile);
 		ReleaseImage(&testImage);
-		/* sprintf(buffer,"Resampled-%d.jpg", i); */
-		/* WriteImage(&ResampledTest, buffer); */
-		ReplaceInImage(i, 
-			       index_array,  /* orientation_array, */ 
-			       nx_dim, ny_dim, 
-			       FinalImage, ResampledTest);
+#ifdef DEBUG
+		sprintf(buffer,"Resampled-%d.jpg", i);
+		WriteImage(&ResampledTest, buffer); 
+#endif
+		ReplaceInImage(i, index_array, nx_dim, ny_dim, 
+			       FinalImage, ResampledTest); /* orientation_array, */ 
 		ReleaseImage(&ResampledTest);
 	    }
 	    /*   Loop through index_array, replacing locations in final image with library image if it matches index value. */
@@ -108,6 +104,7 @@ int main (int argc, char **argv) {
 	}
     }
 }
+
 #ifdef RANDOMIMAGES
 #include <stdlib.h>
 
