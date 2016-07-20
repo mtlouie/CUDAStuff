@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <strings.h>  /* For rindex */
 #include <stdlib.h>   /* For malloc and atoi */
 #include <unistd.h>   /* For getopt */
 #include <getopt.h>
@@ -24,18 +25,22 @@ ImageData Resample(ImageData testImage, size_t sampled_x, size_t sampled_y);
 int main (int argc, char **argv) {
 
     char buffer[256];
+    char *btmp;
     int nx_src, ny_src;
     int nx_sample, ny_sample;
     int nx_dim, ny_dim;
     int *index_array;
     long *min_rms_array;
     int i;
+    int k;
     int nx_test, ny_test;
     int nx_tile, ny_tile;
     int nx_final, ny_final;
     int flag;
     int do_grayscale=0;
     int enable_verbose=0;
+    int do_counts=0;
+    int *counts;
 #ifdef _OPENMP
     int ithreads;
 #endif
@@ -46,6 +51,7 @@ int main (int argc, char **argv) {
     nx_tile=ny_tile=TILESIZE;
 
     /* parse optional command line arguments:
+	 -c              compute counts of images used
          -g              enables grayscale processing
 	 -h              print help and exit
          -s VALUE        sets nx_sample=ny_sample=VALUE
@@ -53,15 +59,20 @@ int main (int argc, char **argv) {
 	 -v              enable verbose output
     */
 
-    while((flag=getopt(argc, argv, "ghs:t:v"))!=-1) {
+    while((flag=getopt(argc, argv, "cghs:t:v"))!=-1) {
 	switch(flag) {
+	case 'c':
+	    printf("Computing counts of images used\n");
+	    do_counts=1;
+	    break;
 	case 'g':
 	    printf("Enabling grayscale image processing\n");
 	    do_grayscale=1;
 	    break;
 	case 'h':
-	    printf("Usage: %s [-g] [-h] [-s VALUE] [-t VALUE] [-v] target_image list_of_tile_images\n", argv[0]);
+	    printf("Usage: %s [-c] [-g] [-h] [-s VALUE] [-t VALUE] [-v] target_image list_of_tile_images\n", argv[0]);
 	    printf("FLAGS\n");
+	    printf("\t-c              compute counts of images used\n");
 	    printf("\t-g              enables grayscale processing\n");
 	    printf("\t-h              print this help and exit\n");
 	    printf("\t-s VALUE        sets nx_sample=ny_sample=VALUE\n");
@@ -99,7 +110,7 @@ int main (int argc, char **argv) {
 	}
 
 	ImageData srcImage = ReadImage(argv[optind]);
-	if (srcImage.valid) {
+	if (srcImage.valid==1) {
 	    nx_src=srcImage.xDim;
 	    ny_src=srcImage.yDim;
 	    nx_dim=nx_src/nx_sample;
@@ -109,8 +120,9 @@ int main (int argc, char **argv) {
 	     * index_array is array of indices into library of images
 	     * orientation_array is array of orientations of library images
 	     * (only for square test images) */
+
 	    index_array=(int *)malloc(nx_dim*ny_dim*sizeof(int));
-            for(int k=0; k<(nx_dim*ny_dim); k++) 
+            for(k=0; k<(nx_dim*ny_dim); k++) 
 		index_array[k]=0;
 		
         /* if(nx_test==ny_test) {
@@ -119,7 +131,7 @@ int main (int argc, char **argv) {
 	    /* min_rms_array is metric for difference between test and original images
 	       at each block of the original */
 	    min_rms_array=(long *)malloc(nx_dim*ny_dim*sizeof(long));
-            for(int k=0; k<(nx_dim*ny_dim); k++) 
+            for(k=0; k<(nx_dim*ny_dim); k++) 
 		min_rms_array[k]=LONG_MAX;
 	    /* test_image is buffer for library images to be compared against original */
 	    /* Loop over library images to compare against target  */
@@ -189,10 +201,31 @@ int main (int argc, char **argv) {
 	    if(enable_verbose==1)
 		printf("\n");
 
-	    /*   Loop through index_array, replacing locations in final image with library image if it matches index value. */
-	    sprintf(buffer,"tiled-%s", argv[optind]);
+	    if((btmp=rindex(argv[optind],'/'))==(char *)NULL)
+		sprintf(buffer,"tiled-%s", argv[optind]);
+	    else 
+		sprintf(buffer,"tiled-%s", btmp+1);
+
+	    printf("Printing final image on %s\n", buffer);
 	    WriteImage(&FinalImage, buffer);
+
 	    ReleaseImage(&FinalImage);
+	    free(min_rms_array);
+	    if(do_counts>0) {
+		counts=(int *)malloc(argc*sizeof(int));
+		for(k=0;k<argc;k++)
+		    counts[k]=0;
+		for(k=0;k<nx_dim*ny_dim;k++) 
+		    counts[index_array[k]]++;
+		printf("Image #\tCount\tImage\n");
+		for(k=optind+1;k<argc;k++) 
+		    printf("%d\t%d\t%s\n",k,counts[k],argv[k]);
+		free(counts);
+	    }
+	    free(index_array);
+	}
+	else {
+	    printf("%s is not valid\n", argv[optind]);
 	}
     }
 }
