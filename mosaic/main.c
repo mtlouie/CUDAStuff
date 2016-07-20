@@ -4,6 +4,9 @@
 #include <getopt.h>
 #include "image.h"
 #include "CompareImage.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 /* Tile dimensions used in comparisons */
 #ifndef SAMPLESIZE
@@ -32,17 +35,39 @@ int main (int argc, char **argv) {
     int nx_final, ny_final;
     int flag;
     int do_grayscale=0;
+    int enable_verbose=0;
+#ifdef _OPENMP
+    int ithreads;
+#endif
     extern char *optarg;
     extern int optind, opterr, optopt;
 
     nx_sample=ny_sample=SAMPLESIZE;
     nx_tile=ny_tile=TILESIZE;
 
-    while((flag=getopt(argc, argv, "gs:t:"))!=-1) {
+    /* parse optional command line arguments:
+         -g              enables grayscale processing
+	 -h              print help and exit
+         -s VALUE        sets nx_sample=ny_sample=VALUE
+         -t VALUE        sets nx_tile=ny_tile=VALUE
+	 -v              enable verbose output
+    */
+
+    while((flag=getopt(argc, argv, "ghs:t:v"))!=-1) {
 	switch(flag) {
 	case 'g':
-	    printf("Setting grayscale\n");
+	    printf("Enabling grayscale image processing\n");
 	    do_grayscale=1;
+	    break;
+	case 'h':
+	    printf("Usage: %s [-g] [-h] [-s VALUE] [-t VALUE] [-v] target_image list_of_tile_images\n", argv[0]);
+	    printf("FLAGS\n");
+	    printf("\t-g              enables grayscale processing\n");
+	    printf("\t-h              print this help and exit\n");
+	    printf("\t-s VALUE        sets nx_sample=ny_sample=VALUE\n");
+	    printf("\t-t VALUE        sets nx_tile=ny_tile=VALUE\n");
+	    printf("\t-v              enable verbose output\n");
+	    exit(0);
 	    break;
 	case 's':
 	    nx_sample=ny_sample=atoi(optarg);
@@ -52,18 +77,29 @@ int main (int argc, char **argv) {
 	    nx_tile=ny_tile=atoi(optarg);
 	    printf("Setting nx_tile=ny_tile=%d\n", nx_tile);
 	    break;
+	case 'v':
+	    enable_verbose=1;	   
+	    break;
 	}
     }
 
+#ifdef _OPENMP
+	// If OpenMP, set up number of threads
+    ithreads=omp_get_max_threads();
+    printf("OpenMP enabled with a maximum of %d threads\n",ithreads);
+#endif
+
     /* Read source image into memory
      * Get filename from command line after parsing command line args */
-    if ((argc-optind)>1)
-    {	
-	fprintf(stderr,"Files to process = %d\n", argc-optind+1);
-	fprintf(stderr,"Target = %s\n", argv[optind]);
+    if ((argc-optind)>1) {	
+
+	if(enable_verbose==1) {
+	    fprintf(stderr,"Files to process = %d\n", argc-optind+1);
+	    fprintf(stderr,"Target = %s\n", argv[optind]);
+	}
+
 	ImageData srcImage = ReadImage(argv[optind]);
-	if (srcImage.valid)
-	{
+	if (srcImage.valid) {
 	    nx_src=srcImage.xDim;
 	    ny_src=srcImage.yDim;
 	    nx_dim=nx_src/nx_sample;
@@ -86,47 +122,53 @@ int main (int argc, char **argv) {
             for(int k=0; k<(nx_dim*ny_dim); k++) 
 		min_rms_array[k]=LONG_MAX;
 	    /* test_image is buffer for library images to be compared against original */
-	    /* Loop over library images */
+	    /* Loop over library images to compare against target  */
 	    for(i=optind+1; i<argc; i++) {
-#ifdef VERBOSE
-		printf("*");
-		if((i-optind)%50==0) 
-		    printf("\n");
-#endif
-		/*   Get library image */
+
+		if(enable_verbose==1) {
+		    printf("*");
+		    if((i-optind)%50==0) 
+			printf("\n");
+		}
+
+		/* Open library image */
 		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
 		nx_test=testImage.xDim;
 		ny_test=testImage.yDim;
-		/*   Resample library image to tile size */
+		/* Resample library image to tile size */
 		ResampledTest=Resample(testImage, nx_sample, ny_sample);
 		ReleaseImage(&testImage);
-		/*   Compare tile with source image by tiling over source image index_array, orientation_array, comparison_array */
+		/* Compare tile with source image by tiling over source image index_array, orientation_array, comparison_array */
 		CompareImage(srcImage, ResampledTest, i, index_array, min_rms_array, nx_dim, ny_dim, do_grayscale); /*, orientation_array */
 		ReleaseImage(&ResampledTest);
 	    }
 	
 	    /* Free memory for source image. */
 	    ReleaseImage(&srcImage);
-#ifdef VERBOSE
-	    printf("\n");
-#endif
+
+	    if(enable_verbose==1)
+		printf("\n");
+
 	    /*
 	     * Constructing the final image
 	     */
+
 	    nx_final=((nx_src+nx_sample-1)/nx_sample)*nx_tile;
 	    ny_final=((ny_src+ny_sample-1)/ny_sample)*ny_tile;
 	    ImageData FinalImage;
 	    FinalImage.xDim=nx_final;
 	    FinalImage.yDim=ny_final;
 	    FinalImage.pixels=malloc(nx_final*ny_final*sizeof(Pixel));
-	    /* Loop over library images */
+	    /* Loop over library images to build final image */
 	    for(i=optind+1; i<argc; i++) {
-#ifdef VERBOSE
-		printf("-");
-		if((i-optind)%50==0) 
-		    printf("\n");
-#endif
+
+		if(enable_verbose==1) {
+		    printf("-");
+		    if((i-optind)%50==0) 
+			printf("\n");
+		}
+
 		/* Insert logic to skip unused library images */
 		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
@@ -143,9 +185,10 @@ int main (int argc, char **argv) {
 		ReplaceInImage(i, index_array, nx_dim, ny_dim, FinalImage, ResampledTest, do_grayscale); /* orientation_array, */ 
 		ReleaseImage(&ResampledTest);
 	    }
-#ifdef VERBOSE
-	    printf("\n");
-#endif
+
+	    if(enable_verbose==1)
+		printf("\n");
+
 	    /*   Loop through index_array, replacing locations in final image with library image if it matches index value. */
 	    sprintf(buffer,"tiled-%s", argv[optind]);
 	    WriteImage(&FinalImage, buffer);

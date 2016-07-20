@@ -1,22 +1,26 @@
 # Makefile for mosaic app and associated testers
-
 CC = gcc
+#CFLAGS = -Wall -Werror  -std=c99
+CFLAGS = -Wall -std=c99 -O3 -fopenmp
 #CC = nvcc
 
-#OPTS = -Wall -Werror  -std=c99
-OPTS = -Wall  -std=c99 -O3 -DSAMPLESIZE=8 -DTILESIZE=24 -DVERBOSE
+LIBS = -ljpeg -lpng -lz
 
-mosaic: mosaic.o image.o CompareImage.o
-	$(CC) mosaic.o image.o CompareImage.o -o mosaic -ljpeg -lpng -lz
+OBJECTS = mosaic.o image.o CompareImage.o
 
-mosaic.o: main.c image.h CompareImage.h
-	$(CC) -c $(OPTS) main.c -o mosaic.o
+all: mosaic
 
-image.o: image.h image.c
-	$(CC) -c $(OPTS) image.c -o image.o
+$(OBJECTS) : image.h CompareImage.h
 
-CompareImage.o: CompareImage.h CompareImage.c
-	$(CC) -c $(OPTS) CompareImage.c -o CompareImage.o
+
+mosaic: $(OBJECTS)
+	$(CC) $(CFLAGS)  -o $@ $^ $(LIBS)
+
+%.o : %.c
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+mosaic.o: main.c 
+	$(CC) -c $(CFLAGS) -o $@ $<
 
 mosaic_test: mosaic
 	rm -f mosaicLena.jpg

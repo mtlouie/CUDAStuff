@@ -19,6 +19,7 @@ void CompareImage(ImageData srcImage, ImageData ResampledTest, int img,
   int i, j, itile, jtile;
 
   /* Loop over the tiles in the final image. */
+#pragma omp parallel for private(j,i,ioffset,score,jtile,itile,itest,jrow,icol,isrc,srctmp,testtmp,r,g,b)
   for(j=0; j<ny_dim; j++) {
     for(i=0; i<nx_dim; i++) {
       ioffset=i+j*nx_dim;
@@ -76,6 +77,7 @@ void ReplaceInImage(int img, int *index_array,
     }
   }
   /* Loop over blocks (tiles) of the smaller image in the larger */
+#pragma omp parallel for private(j,i,ioffset,jtest,itest,isample,jrow,icol,ifinal,finaltmp,testtmp)
   for(j=0; j<ny_dim; j++) {
     for(i=0; i<nx_dim; i++) {
       ioffset=i+j*nx_dim; /* Offset in index_array of an image sample */
