@@ -179,6 +179,7 @@ ImageData ReadJPG(char* fileName)
 
   int data_size = meta.xDim * meta.yDim * 3;
   meta.pixels = (Pixel *)malloc(data_size);
+  meta.valid = true;
   
   // Step 6: Process the rows
   unsigned char* rowptr[1];
