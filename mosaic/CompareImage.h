@@ -5,3 +5,4 @@ void ReplaceInImage(int img, int *index_array,
 		    int nx_dim, int ny_dim, 
 		    ImageData FinalImage, ImageData ResampledTest, int do_grayscale);/* orientation_array, */ 
 
+void RotateImageCCW(ImageData* Image);

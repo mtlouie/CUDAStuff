@@ -9,13 +9,13 @@
 #include <omp.h>
 #endif
 
-/* Tile dimensions used in comparisons */
+/* Default tile dimensions used in comparisons */
 #ifndef SAMPLESIZE
 #define SAMPLESIZE 8
 #endif
-/* Tile dimensions used in replacements */
+/* Default tile dimensions used in replacements */
 #ifndef TILESIZE
-#define TILESIZE 24
+#define TILESIZE  16
 #endif
 
 #include <limits.h>  /* Defines LONG_MAX */
@@ -32,6 +32,8 @@ int main (int argc, char **argv) {
     int *index_array;
     long *min_rms_array;
     int i;
+    int image_label;
+    int iorientation;
     int k;
     int nx_test, ny_test;
     int nx_tile, ny_tile;
@@ -41,6 +43,7 @@ int main (int argc, char **argv) {
     int enable_verbose=0;
     int do_counts=0;
     int *counts;
+    int max_orientations=1;
 #ifdef _OPENMP
     int ithreads;
 #endif
@@ -59,7 +62,7 @@ int main (int argc, char **argv) {
 	 -v              enable verbose output
     */
 
-    while((flag=getopt(argc, argv, "cghs:t:v"))!=-1) {
+    while((flag=getopt(argc, argv, "cghrs:t:v"))!=-1) {
 	switch(flag) {
 	case 'c':
 	    printf("Computing counts of images used\n");
@@ -75,10 +78,14 @@ int main (int argc, char **argv) {
 	    printf("\t-c              compute counts of images used\n");
 	    printf("\t-g              enables grayscale processing\n");
 	    printf("\t-h              print this help and exit\n");
+	    printf("\t-r              include rotated images in mosaic\n");
 	    printf("\t-s VALUE        sets nx_sample=ny_sample=VALUE\n");
 	    printf("\t-t VALUE        sets nx_tile=ny_tile=VALUE\n");
 	    printf("\t-v              enable verbose output\n");
 	    exit(0);
+	    break;
+	case 'r':
+	    max_orientations=4;
 	    break;
 	case 's':
 	    nx_sample=ny_sample=atoi(optarg);
@@ -117,22 +124,20 @@ int main (int argc, char **argv) {
 	    ny_dim=ny_src/ny_sample;
 
 	    /* Allocate memory for Mosaic data
-	     * index_array is array of indices into library of images
-	     * orientation_array is array of orientations of library images
-	     * (only for square test images) */
+	     * index_array is array of indices into library of images */
 
 	    index_array=(int *)malloc(nx_dim*ny_dim*sizeof(int));
             for(k=0; k<(nx_dim*ny_dim); k++) 
 		index_array[k]=0;
 		
-        /* if(nx_test==ny_test) {
-	orientation_array=(char *)malloc(nx_dim*ny_dim*sizeof(char));
-	}*/
 	    /* min_rms_array is metric for difference between test and original images
 	       at each block of the original */
 	    min_rms_array=(long *)malloc(nx_dim*ny_dim*sizeof(long));
             for(k=0; k<(nx_dim*ny_dim); k++) 
 		min_rms_array[k]=LONG_MAX;
+
+	    printf("Scanning tiles over source image");
+
 	    /* test_image is buffer for library images to be compared against original */
 	    /* Loop over library images to compare against target  */
 	    for(i=optind+1; i<argc; i++) {
@@ -151,13 +156,20 @@ int main (int argc, char **argv) {
 		/* Resample library image to tile size */
 		ResampledTest=Resample(testImage, nx_sample, ny_sample);
 		ReleaseImage(&testImage);
-		/* Compare tile with source image by tiling over source image index_array, orientation_array, comparison_array */
-		CompareImage(srcImage, ResampledTest, i, index_array, min_rms_array, nx_dim, ny_dim, do_grayscale); /*, orientation_array */
+		for(iorientation=0; iorientation<max_orientations; iorientation++) {
+		    image_label=max_orientations*i+iorientation;
+		    /* Compare tile with source image by tiling over source image index_array,  comparison_array */
+		    CompareImage(srcImage, ResampledTest, image_label, index_array, min_rms_array, nx_dim, ny_dim, do_grayscale);
+		    if(max_orientations>1)
+			RotateImageCCW(&ResampledTest);
+		}
 		ReleaseImage(&ResampledTest);
 	    }
 	
 	    /* Free memory for source image. */
 	    ReleaseImage(&srcImage);
+
+	    printf("Constructing final image");
 
 	    if(enable_verbose==1)
 		printf("\n");
@@ -172,6 +184,13 @@ int main (int argc, char **argv) {
 	    FinalImage.xDim=nx_final;
 	    FinalImage.yDim=ny_final;
 	    FinalImage.pixels=malloc(nx_final*ny_final*sizeof(Pixel));
+	    /* Initialize image with zeros */
+	    for(i=0; i<nx_final*ny_final; i++) {
+		FinalImage.pixels[i].R=0;
+		FinalImage.pixels[i].G=0;
+		FinalImage.pixels[i].B=0;
+	    }
+
 	    /* Loop over library images to build final image */
 	    for(i=optind+1; i<argc; i++) {
 
@@ -190,11 +209,16 @@ int main (int argc, char **argv) {
 #endif
 		ResampledTest=Resample(testImage, nx_tile, ny_tile);
 		ReleaseImage(&testImage);
+		for(iorientation=0; iorientation<max_orientations; iorientation++) {
+		    image_label=max_orientations*i+iorientation;
 #ifdef DEBUG
-		sprintf(buffer,"Resampled-%d.jpg", i);
-		WriteImage(&ResampledTest, buffer); 
+		    sprintf(buffer,"Resampled-%d.jpg", image_label);
+		    WriteImage(&ResampledTest, buffer); 
 #endif
-		ReplaceInImage(i, index_array, nx_dim, ny_dim, FinalImage, ResampledTest, do_grayscale); /* orientation_array, */ 
+		    ReplaceInImage(image_label, index_array, nx_dim, ny_dim, FinalImage, ResampledTest, do_grayscale);
+		    if(max_orientations>1)
+			RotateImageCCW(&ResampledTest);
+		}
 		ReleaseImage(&ResampledTest);
 	    }
 
@@ -212,14 +236,20 @@ int main (int argc, char **argv) {
 	    ReleaseImage(&FinalImage);
 	    free(min_rms_array);
 	    if(do_counts>0) {
-		counts=(int *)malloc(argc*sizeof(int));
-		for(k=0;k<argc;k++)
+		counts=(int *)malloc(max_orientations*argc*sizeof(int));
+		for(k=0;k<max_orientations*argc;k++)
 		    counts[k]=0;
 		for(k=0;k<nx_dim*ny_dim;k++) 
 		    counts[index_array[k]]++;
-		printf("Image #\tCount\tImage\n");
-		for(k=optind+1;k<argc;k++) 
-		    printf("%d\t%d\t%s\n",k,counts[k],argv[k]);
+		printf("Image #\tCount\tOrientation\tImage\n");
+		for(k=optind+1;k<argc;k++) {
+		    for(iorientation=0; iorientation<max_orientations; iorientation++)
+			printf("%d\t%d\t%d\t%s\n",
+			       max_orientations*k+iorientation,
+			       counts[max_orientations*k+iorientation], 
+			       iorientation, 
+			       argv[k]);
+		}
 		free(counts);
 	    }
 	    free(index_array);

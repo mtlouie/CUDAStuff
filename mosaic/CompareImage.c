@@ -1,10 +1,10 @@
 #include "image.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void CompareImage(ImageData srcImage, ImageData ResampledTest, int img, 
 		  int *index_array, long *min_rms_array, int nx_dim, int ny_dim, 
 		  int do_grayscale)
-/* int * orientation_array, */
 {
   long score;
   long r, g, b;
@@ -56,7 +56,6 @@ void ReplaceInImage(int img, int *index_array,
 		    int nx_dim, int ny_dim, 
 		    ImageData FinalImage, ImageData ResampledTest,
 		    int do_grayscale) 
-/* orientation_array, */ 
 {
   int nx_final=FinalImage.xDim;
   int ny_final=FinalImage.yDim;
@@ -67,15 +66,15 @@ void ReplaceInImage(int img, int *index_array,
   Pixel *finaltmp, *testtmp;
   int itest, jtest, ifinal, isample;
   int jrow, icol;
-  if(img==2) {
-    /* Initialize final image to zeroes on first call.*/
-    for(ifinal=0; ifinal<nx_final*ny_final; ifinal++) {
-      finaltmp=(FinalImage.pixels)+ifinal;
-      finaltmp->R=0;
-      finaltmp->G=0;
-      finaltmp->B=0;
-    }
-  }
+  /* if(img==2) { */
+  /*   /\* Initialize final image to zeroes on first call.*\/ */
+  /*   for(ifinal=0; ifinal<nx_final*ny_final; ifinal++) { */
+  /*     finaltmp=(FinalImage.pixels)+ifinal; */
+  /*     finaltmp->R=0; */
+  /*     finaltmp->G=0; */
+  /*     finaltmp->B=0; */
+  /*   } */
+  /* } */
   /* Loop over blocks (tiles) of the smaller image in the larger */
 #pragma omp parallel for private(j,i,ioffset,jtest,itest,isample,jrow,icol,ifinal,finaltmp,testtmp)
   for(j=0; j<ny_dim; j++) {
@@ -115,3 +114,22 @@ void ReplaceInImage(int img, int *index_array,
   FinalImage.valid=1;
 }
 
+void RotateImageCCW(ImageData* Image) {
+  Pixel *buffer, *oldbuf;
+  int i,j, ioffset, joffset;
+  int nx_dim=Image->xDim;
+  int ny_dim=Image->yDim;
+  buffer=(Pixel *)malloc(nx_dim*ny_dim*sizeof(Pixel));
+  oldbuf=Image->pixels;
+  for(j=0; j<ny_dim; j++) {
+    for(i=0; i<nx_dim; i++) {
+      ioffset=i+j*nx_dim; /* Offset of pixel input Image */
+      joffset=j+(nx_dim-1-i)*ny_dim; /* Offset in rotated Image */
+      buffer[joffset]=oldbuf[ioffset];
+   }
+  }
+  free(Image->pixels);
+  Image->pixels=buffer;
+  Image->xDim=ny_dim;
+  Image->yDim=nx_dim;
+}
