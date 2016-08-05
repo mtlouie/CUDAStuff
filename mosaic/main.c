@@ -35,7 +35,6 @@ int main (int argc, char **argv) {
     int image_label;
     int iorientation;
     int k;
-    int nx_test, ny_test;
     int nx_tile, ny_tile;
     int nx_final, ny_final;
     int flag;
@@ -44,6 +43,7 @@ int main (int argc, char **argv) {
     int do_counts=0;
     int *counts;
     int max_orientations=1;
+    int write_tiles=0;
 #ifdef _OPENMP
     int ithreads;
 #endif
@@ -57,12 +57,13 @@ int main (int argc, char **argv) {
 	 -c              compute counts of images used
          -g              enables grayscale processing
 	 -h              print help and exit
+	 -r              include rotated tiles in image
          -s VALUE        sets nx_sample=ny_sample=VALUE
          -t VALUE        sets nx_tile=ny_tile=VALUE
 	 -v              enable verbose output
     */
 
-    while((flag=getopt(argc, argv, "cghrs:t:v"))!=-1) {
+    while((flag=getopt(argc, argv, "cghrs:t:wv"))!=-1) {
 	switch(flag) {
 	case 'c':
 	    printf("Computing counts of images used\n");
@@ -81,10 +82,12 @@ int main (int argc, char **argv) {
 	    printf("\t-r              include rotated images in mosaic\n");
 	    printf("\t-s VALUE        sets nx_sample=ny_sample=VALUE\n");
 	    printf("\t-t VALUE        sets nx_tile=ny_tile=VALUE\n");
+	    printf("\t-w              write tiles to files\n");
 	    printf("\t-v              enable verbose output\n");
 	    exit(0);
 	    break;
 	case 'r':
+	    printf("Including all four tile orientations.\n");
 	    max_orientations=4;
 	    break;
 	case 's':
@@ -95,6 +98,9 @@ int main (int argc, char **argv) {
 	    nx_tile=ny_tile=atoi(optarg);
 	    printf("Setting nx_tile=ny_tile=%d\n", nx_tile);
 	    break;
+	case 'w':
+	    printf("Write tiles to files\n");
+	    write_tiles=1;
 	case 'v':
 	    enable_verbose=1;	   
 	    break;
@@ -136,7 +142,8 @@ int main (int argc, char **argv) {
             for(k=0; k<(nx_dim*ny_dim); k++) 
 		min_rms_array[k]=LONG_MAX;
 
-	    printf("Scanning tiles over source image");
+	    if(enable_verbose==1)
+		printf("Scanning tiles over source image\n");
 
 	    /* test_image is buffer for library images to be compared against original */
 	    /* Loop over library images to compare against target  */
@@ -151,8 +158,6 @@ int main (int argc, char **argv) {
 		/* Open library image */
 		ImageData testImage=ReadImage(argv[i]);
 		ImageData ResampledTest;
-		nx_test=testImage.xDim;
-		ny_test=testImage.yDim;
 		/* Resample library image to tile size */
 		ResampledTest=Resample(testImage, nx_sample, ny_sample);
 		ReleaseImage(&testImage);
@@ -169,11 +174,12 @@ int main (int argc, char **argv) {
 	    /* Free memory for source image. */
 	    ReleaseImage(&srcImage);
 
-	    printf("Constructing final image");
 
-	    if(enable_verbose==1)
+
+	    if(enable_verbose==1) {
 		printf("\n");
-
+		printf("Constructing final image\n");
+	    }
 	    /*
 	     * Constructing the final image
 	     */
@@ -211,10 +217,10 @@ int main (int argc, char **argv) {
 		ReleaseImage(&testImage);
 		for(iorientation=0; iorientation<max_orientations; iorientation++) {
 		    image_label=max_orientations*i+iorientation;
-#ifdef DEBUG
-		    sprintf(buffer,"Resampled-%d.jpg", image_label);
-		    WriteImage(&ResampledTest, buffer); 
-#endif
+		    if(write_tiles==1) {
+			sprintf(buffer,"Resampled-%d.jpg", image_label);
+			WriteImage(&ResampledTest, buffer); 
+		    }
 		    ReplaceInImage(image_label, index_array, nx_dim, ny_dim, FinalImage, ResampledTest, do_grayscale);
 		    if(max_orientations>1)
 			RotateImageCCW(&ResampledTest);
@@ -222,15 +228,16 @@ int main (int argc, char **argv) {
 		ReleaseImage(&ResampledTest);
 	    }
 
-	    if(enable_verbose==1)
-		printf("\n");
-
 	    if((btmp=rindex(argv[optind],'/'))==(char *)NULL)
 		sprintf(buffer,"tiled-%s", argv[optind]);
 	    else 
 		sprintf(buffer,"tiled-%s", btmp+1);
 
-	    printf("Printing final image on %s\n", buffer);
+	    if(enable_verbose==1) {
+		printf("\n");
+		printf("Printing final image on %s\n", buffer);
+	    }
+
 	    WriteImage(&FinalImage, buffer);
 
 	    ReleaseImage(&FinalImage);
