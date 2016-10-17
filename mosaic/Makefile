@@ -1,7 +1,15 @@
 # Makefile for mosaic app and associated testers
 CC = gcc
 #CFLAGS = -Wall -Werror  -std=c99
+ifndef DEBUG
 CFLAGS = -Wall -std=c99 -O3 -fopenmp
+else
+ifeq ($(DEBUG),full)
+CFLAGS = -Wall -std=c99 -O3 -fopenmp -g -pg
+else
+CFLAGS = -Wall -std=c99 -O3 -fopenmp -g
+endif
+endif
 #CC = nvcc
 
 LIBS = -ljpeg -lpng -lz
