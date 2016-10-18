@@ -1,15 +1,27 @@
 # Makefile for mosaic app and associated testers
 CC = gcc
 #CFLAGS = -Wall -Werror  -std=c99
+
+ifndef NO_OPENMP
+OPENMPFLAG = -fopenmp
+else
+OPENMPFLAG = 
+endif
+
 ifndef DEBUG
-CFLAGS = -Wall -std=c99 -O3 -fopenmp
+DEBUGFLAGS=
 else
 ifeq ($(DEBUG),full)
-CFLAGS = -Wall -std=c99 -O3 -fopenmp -g -pg
+# Debug and profiling
+DEBUGFLAGS= -g -pg
 else
-CFLAGS = -Wall -std=c99 -O3 -fopenmp -g
+# Debug only
+DEBUGFLAGS= -g
 endif
 endif
+
+CFLAGS = -Wall -std=c99 -O3 $(OPENMPFLAG) $(DEBUGFLAGS)
+
 #CC = nvcc
 
 LIBS = -ljpeg -lpng -lz
